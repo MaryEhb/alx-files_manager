@@ -1,4 +1,5 @@
 import sha1 from 'sha1';
+import { ObjectId } from 'mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
@@ -64,6 +65,15 @@ class AuthController {
     }
 
     return res.status(204).send();
+  }
+
+  static async getUserByToken(token) {
+    const userId = await redisClient.get(`auth_${token}`) || null;
+    if (!userId) return null;
+    const user = await dbClient.db.collection('users')
+      .findOne({ _id: ObjectId(userId) });
+    if (!user) return null;
+    return user;
   }
 }
 
