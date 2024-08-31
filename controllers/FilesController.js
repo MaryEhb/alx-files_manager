@@ -88,9 +88,10 @@ class FilesController {
   }
 
   static async getShow(req, res) {
+    const token = req.header('X-Token');                                   if (!token) { return res.status(401).json({ error: 'Unauthorized' }); }
     const fileID = req.params.id || '';
 
-    const user = await AuthController.getUserByToken(req.header('X-Token'));
+    const user = await AuthController.getUserByToken(token);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const file = await dbClient.db.collection('files').findOne({
