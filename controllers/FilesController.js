@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb';
 import fs from 'fs';
+import mime from 'mime-types';
 import { v4 as uuidv4 } from 'uuid';
 import dbClient from '../utils/db';
 import AuthController from './AuthController';
@@ -209,6 +210,39 @@ class FilesController {
       isPublic: file.isPublic,
       parentId: file.parentId,
     });
+  }
+
+  static async getFile(req, res) {
+    const token = req.header('X-Token') || null;
+    let user = null;
+    if (token) {
+      user = await AuthController.getUserByToken(token);
+    }
+
+    const fileID = req.params.id || '';
+    const file = await dbClient.db.collection('files').findOne({
+      _id: ObjectId(fileID),
+    });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+    if (!file.isPublic && (!user || user._id !== file.userId)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    if (file.type === 'folder') {
+      return res.status(400)
+        .json({ error: 'A folder doesn\'t have content' });
+    }
+    if (!fs.existsSync(file.localPath)) {
+      return res.status(404).send({ error: 'Not found' });
+    }
+
+    try {
+      const data = fs.readFileSync(file.localPath);
+      const mimeType = mime.contentType(file.name);
+      res.setHeader('Content-Type', mimeType);
+      return res.status(200).send(data);
+    } catch (err) {
+      return res.status(404).send({ error: 'Not found' });
+    }
   }
 }
 
