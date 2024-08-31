@@ -86,6 +86,63 @@ class FilesController {
       return res.status(500).send({ error: 'Server error with db' });
     }
   }
+
+  static async getShow(req, res) {
+    const fileID = req.params.id || '';
+
+    const user = await AuthController.getUserByToken(req.header('X-Token'));
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const file = await dbClient.db.collection('files').findOne({
+      userId: user._id, _id: ObjectId(fileID),
+    });
+    if (!file) return res.status(404).send({ error: 'Not found' });
+    return res.send({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+  }
+
+  static async getIndex(req, res) {
+    const token = req.header('X-Token');
+    if (!token) { return res.status(401).json({ error: 'Unauthorized' }); }
+    const user = await AuthController.getUserByToken(token);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const parentId = req.query.parentId || '0';
+    const pagination = req.query.page || 0;
+
+    const filesCursor = await dbClient.db.collection('files')
+      .aggregate([
+        {
+          $match: {
+            userId: user._id,
+            ...(parentId !== '0' && { parentId: ObjectId(parentId) }),
+          },
+        },
+        {
+          $skip: pagination * 10,
+        },
+        {
+          $limit: 10,
+        },
+      ]);
+
+    const filesArray = await filesCursor.toArray();
+
+    return res.send(filesArray.map((item) => ({
+      id: item._id,
+      userId: item.userId,
+      name: item.name,
+      type: item.type,
+      isPublic: item.isPublic,
+      parentId: item.parentId,
+    })));
+  }
 }
 
 module.exports = FilesController;
