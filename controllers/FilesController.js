@@ -146,6 +146,70 @@ class FilesController {
       parentId: item.parentId,
     })));
   }
+
+  static async putPublish(req, res) {
+    const token = req.header('X-Token');
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await AuthController.getUserByToken(token);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const fileID = req.params.id || '';
+    let file = await dbClient.db.collection('files').findOne({
+      userId: user._id, _id: ObjectId(fileID),
+    });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    await dbClient.db.collection('files')
+      .updateOne({ _id: ObjectId(fileID) }, { $set: { isPublic: true } });
+    file = await dbClient.db.collection('files')
+      .findOne({ _id: ObjectId(fileID), userId: user._id });
+
+    return res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+  }
+
+  static async putUnpublish(req, res) {
+    const token = req.header('X-Token');
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await AuthController.getUserByToken(token);
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const fileID = req.params.id || '';
+    let file = await dbClient.db.collection('files').findOne({
+      userId: user._id, _id: ObjectId(fileID),
+    });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    await dbClient.db.collection('files')
+      .updateOne({ _id: ObjectId(fileID) }, { $set: { isPublic: false } });
+    file = await dbClient.db.collection('files')
+      .findOne({ _id: ObjectId(fileID), userId: user._id });
+
+    return res.status(200).send({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+    });
+  }
 }
 
 module.exports = FilesController;
