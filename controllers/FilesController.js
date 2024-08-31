@@ -224,7 +224,7 @@ class FilesController {
       _id: ObjectId(fileID),
     });
     if (!file) return res.status(404).json({ error: 'Not found' });
-    if (!file.isPublic && (!user || user._id !== file.userId)) {
+    if (!file.isPublic && ((!user) || !user._id.equals(file.userId))) {
       return res.status(404).json({ error: 'Not found' });
     }
     if (file.type === 'folder') {
