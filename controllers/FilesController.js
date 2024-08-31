@@ -88,7 +88,8 @@ class FilesController {
   }
 
   static async getShow(req, res) {
-    const token = req.header('X-Token');                                   if (!token) { return res.status(401).json({ error: 'Unauthorized' }); }
+    const token = req.header('X-Token');
+    if (!token) { return res.status(401).json({ error: 'Unauthorized' }); }
     const fileID = req.params.id || '';
 
     const user = await AuthController.getUserByToken(token);
@@ -97,8 +98,8 @@ class FilesController {
     const file = await dbClient.db.collection('files').findOne({
       userId: user._id, _id: ObjectId(fileID),
     });
-    if (!file) return res.status(404).send({ error: 'Not found' });
-    return res.send({
+    if (!file) return res.status(404).json({ error: 'Not found' });
+    return res.json({
       id: file._id,
       userId: file.userId,
       name: file.name,
@@ -116,6 +117,7 @@ class FilesController {
 
     const parentId = req.query.parentId || '0';
     const pagination = req.query.page || 0;
+    const pageSize = 20;
 
     const filesCursor = await dbClient.db.collection('files')
       .aggregate([
@@ -126,10 +128,10 @@ class FilesController {
           },
         },
         {
-          $skip: pagination * 10,
+          $skip: pagination * pageSize,
         },
         {
-          $limit: 10,
+          $limit: pageSize,
         },
       ]);
 
